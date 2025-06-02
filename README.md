@@ -1,3 +1,3 @@
-# 📦 Análise de Estoque para Produção - V12
+# 📦 Análise de Estoque para Produção - V12.2
 
-Aplicação Web com regras de consumo por prioridade e uso direto de RP.
+Versão revisada com correção completa de sintaxe.
