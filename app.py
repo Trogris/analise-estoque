@@ -10,10 +10,10 @@ qtd_equip = st.sidebar.number_input("Quantidade de Equipamentos a Produzir", min
 prefixo_destino = st.sidebar.selectbox("Prefixo de Código de Destino (TP)", ["PL", "PV"])
 
 st.markdown("#### 📥 Envie a planilha de Estrutura do Produto")
-file_estrutura = st.file_uploader("Estrutura do Produto (.xlsx ou .csv)", type=["xlsx", "csv"], key="estrutura")
+file_estrutura = st.file_uploader("📥 Estrutura do Produto (.xlsx ou .csv)", type=["xlsx", "csv"], key="estrutura")
 
 st.markdown("#### 📥 Envie a planilha de Estoque Atual")
-file_estoque = st.file_uploader("Estoque Atual (.xlsx ou .csv)", type=["xlsx", "csv"], key="estoque")
+file_estoque = st.file_uploader("📥 Estoque Atual (.xlsx ou .csv)", type=["xlsx", "csv"], key="estoque")
 
 def carregar_arquivo(uploaded_file):
     if uploaded_file is not None:

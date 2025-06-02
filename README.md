@@ -1,3 +1,3 @@
-# 📦 Análise de Estoque para Produção
+# 📦 Análise de Estoque para Produção - V12
 
-App Streamlit para análise de estrutura e estoque com transposição e regras específicas.
+Aplicação Web com regras de consumo por prioridade e uso direto de RP.
