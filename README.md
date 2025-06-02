@@ -1,16 +1,23 @@
 # 📘 Análise de Estoque para Produção
 
-## Objetivo
-Registrar a lógica atualizada e regras aplicadas na análise de estoque para produção de equipamentos voltados à locação (PL) e venda (PV), contemplando transposições, uso direto de componentes reparados (RP), e critérios de priorização de consumo de estoque.
+## 1. Objetivo
+Registrar a lógica atualizada e regras aplicadas na análise de estoque para produção de equipamentos voltados à **locação (PL)** e **venda (PV)**, contemplando:
+- Transposições permitidas
+- Uso direto de componentes reparados (RP)
+- Critérios de priorização de consumo de estoque
 
-## Prefixos e Significados
-- PL – Produto para Locação: manutenção por conta da empresa.
-- PV – Produto para Venda: deve usar componentes novos ou homologados.
-- MP – Matéria-Prima.
-- AA – Almoxarifado Auxiliar.
-- RP – Componentes Reparados: uso limitado.
+## 2. Prefixos e Significados
 
-## Regras de Transposição
+| Prefixo | Significado |
+|--------|-------------|
+| 🔹 PL  | Produto para **Locação** – Manutenção por conta da empresa |
+| 🔹 PV  | Produto para **Venda** – Deve usar componentes novos ou homologados |
+| 🔹 MP  | Matéria-Prima |
+| 🔹 AA  | Almoxarifado Auxiliar |
+| 🔹 RP  | Componentes Reparados – Uso **limitado**, com exceções |
+
+## 3. Regras de Transposição
+
 | Origem | Destino | Permitido? |
 |--------|---------|------------|
 | PV     | PL      | ✅         |
@@ -21,16 +28,20 @@ Registrar a lógica atualizada e regras aplicadas na análise de estoque para pr
 | MP     | PV      | ✅         |
 | PL     | MP      | ✅         |
 | PL     | PV      | ✅         |
-| RP     | Qualquer| ❌         |
+| RP     | Qualquer| ❌ **Proibido em transposição** |
 
-## Lógica de Consumo – PL
-1. Verifica saldo no próprio prefixo PL
-2. Tenta transpor de MP, PV, AA para PL
-3. Se ainda faltar, verifica saldo no RP (uso direto, sem transposição)
-4. Se ainda faltar, sinaliza saldo a comprar
+> ⚠️ **RP nunca pode ser origem ou destino de transposição.**
 
-## Lógica de Consumo – PV
-1. Verifica saldo no próprio prefixo PV
-2. Tenta transpor de MP, PL, AA para PV
-3. Nunca utiliza RP
-4. Se ainda faltar, sinaliza saldo a comprar
+## 4. 🔁 Lógica de Consumo para Produção de Equipamentos **PL**
+
+1. ✅ Verifica **saldo no prefixo PL**
+2. 🔄 Tenta **transpor** de: **MP**, **PV**, **AA** → PL *(respeitando regras)*
+3. 🔧 Verifica saldo no **RP** → *uso direto permitido, sem transposição*
+4. 🛒 Se ainda faltar → **saldo faltante é sinalizado para compra**
+
+## 5. 🔁 Lógica de Consumo para Produção de Equipamentos **PV**
+
+1. ✅ Verifica **saldo no prefixo PV**
+2. 🔄 Tenta **transpor** de: **MP**, **PL**, **AA** → PV *(respeitando regras)*
+3. ❌ Nunca utiliza componentes do **RP**
+4. 🛒 Se ainda faltar → **saldo faltante é sinalizado para compra**
