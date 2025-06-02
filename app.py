@@ -1,78 +1,48 @@
-
 import streamlit as st
 import pandas as pd
+from utils import (
+    carregar_arquivo,
+    analisar_estoque,
+    resetar_estado
+)
 
-st.set_page_config(page_title="📦 Análise de Estoque para Produção", layout="wide")
+st.set_page_config(page_title="📘 Análise de Estoque para Produção", layout="wide")
 
-st.title("📦 Análise de Estoque para Produção")
+st.title("📘 Análise de Estoque para Produção")
 
-st.sidebar.header("Parâmetros da Análise")
-qtd_equip = st.sidebar.number_input("Quantidade de Equipamentos a Produzir", min_value=1, value=1, step=1)
-tp_destino = st.sidebar.selectbox("Prefixo de Código de Destino (TP)", ["PL", "PV"])
+if "analisado" not in st.session_state:
+    st.session_state.analisado = False
 
-st.markdown("### 📥 Envie a planilha de Estrutura do Produto")
-file_estrutura = st.file_uploader("Drag and drop file here", type="xlsx", key="estrutura")
+col1, col2 = st.columns([3, 2])
+with col1:
+    quantidade = st.number_input("Quantidade de Equipamentos a Produzir", min_value=1, value=1)
+with col2:
+    destino = st.selectbox("Código de Destino", ["PL", "PV"])
 
-st.markdown("### 📥 Envie a planilha de Estoque Atual")
-file_estoque = st.file_uploader("Drag and drop file here", type="xlsx", key="estoque")
+with st.expander("📥 Carregar Arquivos", expanded=True):
+    col1, col2 = st.columns(2)
+    with col1:
+        estoque_file = st.file_uploader("📥 Estoque (Excel ou CSV)", type=["xlsx", "xls", "csv"], key="estoque")
+    with col2:
+        estrutura_file = st.file_uploader("📥 Estrutura do Produto (Excel ou CSV)", type=["xlsx", "xls", "csv"], key="estrutura")
 
-if file_estrutura and file_estoque:
-    estrutura = pd.read_excel(file_estrutura)
-    estoque = pd.read_excel(file_estoque)
+executar = st.button("🚀 Executar Análise")
 
-    estrutura["Total Necessário"] = estrutura["Quantidade"] * qtd_equip
-    resultado = []
+if executar and estoque_file and estrutura_file:
+    df_estoque = carregar_arquivo(estoque_file)
+    df_estrutura = carregar_arquivo(estrutura_file)
+    df_resultado = analisar_estoque(df_estoque, df_estrutura, quantidade, destino)
+    st.session_state.analisado = True
+    st.session_state.df_resultado = df_resultado
 
-    for _, row in estrutura.iterrows():
-        cod = row["Código do Item"]
-        qtd_necessaria = row["Total Necessário"]
+if st.session_state.analisado:
+    st.dataframe(st.session_state.df_resultado.style.set_properties(subset=["🔧 Parâmetros da Análise"], **{"width": "200px"}), use_container_width=True)
+    buffer = pd.ExcelWriter("/mnt/data/resultado_estoque.xlsx", engine='openpyxl')
+    st.session_state.df_resultado.to_excel(buffer, index=False)
+    buffer.close()
+    with open("/mnt/data/resultado_estoque.xlsx", "rb") as file:
+        st.download_button("📥 Baixar Resultado em Excel", data=file, file_name="resultado_estoque.xlsx")
 
-        saldo_total = estoque[estoque["Código"] == cod]["Saldo"].sum()
-        origem_saldos = estoque[estoque["Código"] == cod].set_index("Prefixo")["Saldo"].to_dict()
-
-        falta = max(0, qtd_necessaria - saldo_total)
-        situacao = "OK" if falta == 0 else "Faltando"
-        transposicao = "-"
-
-        if falta > 0:
-            if tp_destino == "PL":
-                usar = 0
-                for prefixo in ["MP", "AA", "PV"]:
-                    if prefixo in origem_saldos and origem_saldos[prefixo] > 0:
-                        usar = min(falta, origem_saldos[prefixo])
-                        falta -= usar
-                        transposicao = f"{usar} unid de {prefixo} → {tp_destino}\n"
-                        if falta == 0:
-                            break
-                if falta > 0 and "RP" in origem_saldos and origem_saldos["RP"] > 0:
-                    usar_rp = min(falta, origem_saldos["RP"])
-                    falta -= usar_rp
-                    if transposicao == "-":
-                        transposicao = ""
-                    transposicao += f"{usar_rp} unid do RP (uso direto)\n"
-            elif tp_destino == "PV":
-                usar = 0
-                for prefixo in ["MP", "AA", "PL"]:
-                    if prefixo in origem_saldos and origem_saldos[prefixo] > 0:
-                        usar = min(falta, origem_saldos[prefixo])
-                        falta -= usar
-                        transposicao = f"{usar} unid de {prefixo} → {tp_destino}\n"
-                        if falta == 0:
-                            break
-
-        resultado.append({
-            "Componente": cod,
-            "Situação": "OK" if falta == 0 else "Faltando mesmo com transposição",
-            "Qtd Faltante": falta,
-            "Transposição Sugerida": transposicao
-        })
-
-    df_resultado = pd.DataFrame(resultado)
-
-    st.dataframe(df_resultado)
-
-    st.download_button(
-        "📥 Baixar Resultado em Excel",
-        data=df_resultado.to_excel(index=False, engine="openpyxl"),
-        file_name="resultado_estoque.xlsx"
-    )
+    if st.button("🔄 Nova Análise"):
+        resetar_estado()
+        st.experimental_rerun()
