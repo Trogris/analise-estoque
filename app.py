@@ -1,8 +1,13 @@
 
 import streamlit as st
 import pandas as pd
-from utils.analise import analisar_estoque
 from io import BytesIO
+import sys
+import os
+
+# Adiciona a pasta 'utils' ao path do sistema
+sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
+from analise import analisar_estoque
 
 st.set_page_config(page_title="Análise de Estoque para Produção", layout="centered")
 st.title("🔎 Análise de Estoque para Produção")
