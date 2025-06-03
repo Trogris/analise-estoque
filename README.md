@@ -1,3 +1,3 @@
-# Análise de Estoque para Produção
+# Análise de Estoque para Produção (V6)
 
-Sistema em Streamlit para análise de estoque com base na estrutura de produto e regras de transposição.
+Versão com barra lateral e botões de controle.
