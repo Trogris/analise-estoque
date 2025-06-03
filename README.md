@@ -1,3 +1,3 @@
-# 📦 Análise de Estoque para Produção - V12
+# Análise de Estoque para Produção
 
-Aplicação Web com regras de consumo por prioridade e uso direto de RP.
+Sistema web em Streamlit para análise de estoque com base em estrutura de produto e regras de transposição.
