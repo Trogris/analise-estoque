@@ -1,41 +1,32 @@
-
 import streamlit as st
 import pandas as pd
-from io import BytesIO
-import sys
-import os
+from utils import analisar_estoque
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "utils"))
-from analise import analisar_estoque
+st.set_page_config(page_title="📘 Análise de Estoque para Produção", layout="centered")
 
-st.set_page_config(page_title="Análise de Estoque para Produção", layout="centered")
-st.title("🔎 Análise de Estoque para Produção")
+st.title("📘 Análise de Estoque para Produção")
+st.write("Importe os arquivos e clique em 'Executar Análise' para verificar a disponibilidade de estoque.")
 
-with st.sidebar:
-    st.markdown("### 🛠 Parâmetros da Análise")
-    qtd = st.number_input("Quantidade de Equipamentos a Produzir", min_value=1, value=1, step=1)
-    codigo_destino = st.selectbox("Código de Destino", options=["PL", "PV", "MP", "AA", "RP"])
-    estrutura_file = st.file_uploader("📥 Estrutura do Produto (.xlsx)", type=["xlsx"])
-    estoque_file = st.file_uploader("📥 Estoque Atual (.xlsx)", type=["xlsx"])
-    executar = st.button("▶️ Executar Análise")
-    nova_analise = st.button("♻️ Nova Análise")
+# Upload de arquivos
+arquivo_estrutura = st.file_uploader("📥 Estrutura do Produto", type=["xlsx", "csv"])
+arquivo_estoque = st.file_uploader("📥 Saldo de Estoque", type=["xlsx", "csv"])
 
-if executar and estrutura_file and estoque_file:
-    estrutura_df = pd.read_excel(estrutura_file)
-    estoque_df = pd.read_excel(estoque_file)
+# Parâmetros
+col1, col2 = st.columns(2)
+with col1:
+    qtd_equipamentos = st.number_input("Quantidade de Equipamentos a Produzir", min_value=1, value=1)
+with col2:
+    codigo_destino = st.selectbox("Código de Destino", options=["PL", "PV"])
 
-    resultado = analisar_estoque(estrutura_df, estoque_df, qtd, codigo_destino)
+# Botões
+executar = st.button("Executar Análise")
+nova_analise = st.button("Nova Análise")
 
-    st.subheader("📊 Resultado da Análise")
+if executar and arquivo_estrutura and arquivo_estoque:
+    estrutura = pd.read_excel(arquivo_estrutura) if arquivo_estrutura.name.endswith("xlsx") else pd.read_csv(arquivo_estrutura)
+    estoque = pd.read_excel(arquivo_estoque) if arquivo_estoque.name.endswith("xlsx") else pd.read_csv(arquivo_estoque)
+
+    resultado = analisar_estoque(estrutura, estoque, qtd_equipamentos, codigo_destino)
     st.dataframe(resultado)
 
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        resultado.to_excel(writer, index=False, sheet_name="Resultado")
-
-    st.download_button(
-        label="📤 Baixar Análise (.xlsx)",
-        data=output.getvalue(),
-        file_name="relatorio_estoque_producao.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    st.download_button("📥 Baixar Resultado em Excel", data=resultado.to_csv(index=False).encode(), file_name="resultado_estoque.csv")
