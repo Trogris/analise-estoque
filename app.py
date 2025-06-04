@@ -1,98 +1,87 @@
-
 import streamlit as st
 import pandas as pd
 import io
 
-st.set_page_config(page_title="📦 Análise de Estoque para Produção", layout="wide")
+st.set_page_config(page_title="📘 Análise de Estoque para Produção", layout="centered")
 
-st.markdown("# 📦 Análise de Estoque para Produção")
-st.write("")
+st.title("📘 Análise de Estoque para Produção")
 
-with st.sidebar:
-    st.markdown("### Parâmetros da Análise")
-    qtd_equip = st.number_input("Quantidade de Equipamentos a Produzir", min_value=1, step=1, value=1)
-    tp_destino = st.selectbox("Prefixo de Código de Destino (TP)", ["PL", "PV"])
+st.sidebar.header("📥 Parâmetros da Análise")
+qtd_equip = st.sidebar.number_input("Quantidade de Equipamentos a Produzir", min_value=1, value=1)
+codigo_destino = st.sidebar.selectbox("Código de Destino", ["PL", "PV"])
 
-estrutura_file = st.file_uploader("📥 Envie a planilha de Estrutura do Produto", type=["xlsx", "csv"])
-estoque_file = st.file_uploader("📥 Envie a planilha de Estoque Atual", type=["xlsx", "csv"])
+estrutura_file = st.sidebar.file_uploader("📥 Carregar Estrutura (Excel ou CSV)", type=["xlsx", "xls", "csv"])
+estoque_file = st.sidebar.file_uploader("📥 Carregar Estoque (Excel ou CSV)", type=["xlsx", "xls", "csv"])
 
-executar = st.button("🚀 Executar Análise")
-nova = st.button("🔄 Nova Análise")
-
-if executar and estrutura_file and estoque_file:
-    if estrutura_file.name.endswith(".csv"):
-        estrutura_df = pd.read_csv(estrutura_file)
-    else:
-        estrutura_df = pd.read_excel(estrutura_file)
-
-    if estoque_file.name.endswith(".csv"):
-        estoque_df = pd.read_csv(estoque_file)
-    else:
-        estoque_df = pd.read_excel(estoque_file)
-
-    estrutura_df.columns = estrutura_df.columns.str.strip().str.lower()
-    estoque_df.columns = estoque_df.columns.str.strip().str.lower()
-
-    estrutura_df["qtd_total"] = estrutura_df["quantidade necessária"] * qtd_equip
-    resultado = []
-
-    for _, row in estrutura_df.iterrows():
-        item = row["código do item"]
-        qtd_necessaria = row["qtd_total"]
-
-        saldo_pleno = estoque_df[estoque_df["código"] == item]
-        saldo_total = saldo_pleno["saldo"].sum() if not saldo_pleno.empty else 0
-
-        consumo = 0
-        origem_usada = []
-
-        def consumir(prefixo):
-            nonlocal consumo
-            filtro = estoque_df[(estoque_df["código"] == item) & (estoque_df["prefixo"] == prefixo)]
-            saldo = filtro["saldo"].sum() if not filtro.empty else 0
-            usar = min(saldo, qtd_necessaria - consumo)
-            consumo += usar
-            if usar > 0:
-                origem_usada.append(f"{int(usar)} unid de {prefixo}")
-            return usar
-
-        if tp_destino == "PL":
-            for origem in ["PL", "MP", "AA", "PV"]:
-                consumir(origem)
-            if consumo < qtd_necessaria:
-                usar_rp = estoque_df[(estoque_df["código"] == item) & (estoque_df["prefixo"] == "RP")]["saldo"].sum()
-                usar_rp = min(usar_rp, qtd_necessaria - consumo)
-                consumo += usar_rp
-                if usar_rp > 0:
-                    origem_usada.append(f"{int(usar_rp)} unid de RP (uso direto)")
-
-        if tp_destino == "PV":
-            for origem in ["PV", "MP", "AA", "PL"]:
-                consumir(origem)
-
-        faltando = int(qtd_necessaria - consumo)
-
-        if faltando <= 0:
-            status = "✅ OK"
-        elif consumo > 0:
-            status = f"⚠️ Necessário Transposição ({' + '.join(origem_usada)})"
-            if faltando > 0:
-                status += f" + Solicitar Compra ({faltando})"
+if estrutura_file and estoque_file:
+    try:
+        if estrutura_file.name.endswith(".csv"):
+            estrutura = pd.read_csv(estrutura_file)
         else:
-            status = f"🛒 Solicitar Compra ({faltando})"
+            estrutura = pd.read_excel(estrutura_file)
 
-        resultado.append({
-            "Componente": item,
-            "Descrição": row["descrição do item"],
-            "Qtd Necessária": int(qtd_necessaria),
-            "Qtd Atendida": int(consumo),
-            "Qtd Faltante": faltando,
-            "Situação": status
-        })
+        if estoque_file.name.endswith(".csv"):
+            estoque = pd.read_csv(estoque_file)
+        else:
+            estoque = pd.read_excel(estoque_file)
 
-    df_resultado = pd.DataFrame(resultado)
-    st.dataframe(df_resultado, use_container_width=True)
+        estrutura["Qtd Total"] = estrutura["Quantidade por Equipamento"] * qtd_equip
 
-    buffer = io.BytesIO()
-    df_resultado.to_excel(buffer, index=False, engine='openpyxl')
-    st.download_button("📥 Baixar Resultado em Excel", data=buffer.getvalue(), file_name="resultado_estoque.xlsx", mime="application/vnd.ms-excel")
+        resultado = []
+
+        for _, row in estrutura.iterrows():
+            item = row["Código do Item"]
+            qtd_necessaria = row["Qtd Total"]
+            descricao = row["Descrição do Item"]
+
+            saldo_total = 0
+            origem_utilizada = ""
+            transposicao = ""
+
+            saldos = estoque[estoque["Código do Item"] == item]
+            saldos_dict = dict(zip(saldos["Código"], saldos["Saldo"]))
+
+            prioridade = []
+            if codigo_destino == "PL":
+                prioridade = ["PL", "MP", "AA", "PV"]
+            elif codigo_destino == "PV":
+                prioridade = ["PV", "MP", "AA", "PL"]
+
+            for prefixo in prioridade:
+                usar = min(saldos_dict.get(prefixo, 0), qtd_necessaria - saldo_total)
+                saldo_total += usar
+                if usar > 0 and prefixo != codigo_destino:
+                    transposicao += f"{usar} unid de {prefixo} → {codigo_destino}; "
+
+            if saldo_total < qtd_necessaria and codigo_destino == "PL":
+                usar_rp = min(saldos_dict.get("RP", 0), qtd_necessaria - saldo_total)
+                saldo_total += usar_rp
+                if usar_rp > 0:
+                    transposicao += f"{usar_rp} unid de RP (uso direto); "
+
+            if saldo_total >= qtd_necessaria:
+                status = "Ok"
+            elif saldo_total > 0:
+                status = "Solicitar Compra (parcial)"
+            else:
+                status = "Solicitar Compra"
+
+            resultado.append({
+                "Código do Item": item,
+                "Descrição do Item": descricao,
+                "Qtd Necessária": qtd_necessaria,
+                "Qtd Atendida": saldo_total,
+                "Status": status,
+                "Transposição": transposicao
+            })
+
+        df_resultado = pd.DataFrame(resultado)
+        st.dataframe(df_resultado)
+
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+            df_resultado.to_excel(writer, index=False)
+        st.download_button("📥 Baixar Resultado em Excel", data=buffer.getvalue(), file_name="resultado_estoque.xlsx")
+
+    except Exception as e:
+        st.error(f"Erro na análise: {e}")
